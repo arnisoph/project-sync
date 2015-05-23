@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+FIXME
+
+Useful links:
+* https://docs.npmjs.com/files/package.json
+"""
+
+import jinja2
+import json
+import os
+from pprint import pprint
+import subprocess
+import sys
+import yaml
+
+
+def load_file(file_path):
+    file_name, file_type = os.path.splitext(file_path)
+    loader = None
+
+    if file_type == '.yaml':
+        loader = yaml
+    else:
+        loader = json
+
+    fh = open(file_path, 'r')
+    stream = fh.read()
+    fh.close()
+
+    if file_type == '.json':
+        return loader.loads(stream)
+    else:
+        return loader.load(stream)
+
+
+def get_value_from_var(var, keys=[], default=None):
+    if isinstance(keys, str):
+        keys = [keys]
+
+    for key in keys:
+        if var.get(key, None):
+            return var.get(key)
+    return default
+
+
+def collect_metadata(data, project_dir):
+    metadata = {}
+
+    metadata['name'] = get_value_from_var(data, 'name')  #TODO
+    metadata['version'] = get_value_from_var(data, 'version', '0.0.1')  #TODO fetch git tag
+    metadata['maintainer'] = get_value_from_var(data, ['maintainer', 'author'], 'FIXME')  #TODO
+
+    if get_value_from_var(data, 'authors'):  # Notice: This is not the same as maintainer
+        metadata['authors'] = get_value_from_var(data, 'authors', [])
+    else:
+        args = ['git', 'log', '--format=\'%aN <%aE>\'']
+        cmd = ' '.join(args)
+        p = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=project_dir)
+        b_stdout, b_stderr = p.communicate()
+        stdout = b_stdout.decode('utf-8')
+
+        if stdout:
+            authors = sorted(set(stdout.rstrip('\n').split('\n')))
+            metadata['authors'] = authors
+
+    if get_value_from_var(data, 'summary'):
+        metadata['summary'] = get_value_from_var(data, 'summary')
+
+    if get_value_from_var(data, 'license'):
+        # use identifier from https://spdx.org/licenses/
+        metadata['license'] = get_value_from_var(data, 'license')
+
+    if get_value_from_var(data, ['repository', 'source']):
+        metadata['source'] = get_value_from_var(data, ['repository', 'source'])
+
+    if get_value_from_var(data, 'dependencies'):
+        metadata['dependencies'] = get_value_from_var(data, 'dependencies')
+
+    if get_value_from_var(data, 'project_page'):
+        metadata['project_page'] = get_value_from_var(data, 'project_page')
+
+    if get_value_from_var(data, 'issues_url'):
+        metadata['issues_url'] = get_value_from_var(data, 'issues_url')
+
+    if get_value_from_var(data, ['compatibility', 'operatingsystem_support']):
+        metadata['compatibility'] = get_value_from_var(data, ['compatibility', 'operatingsystem_support'])
+
+    if get_value_from_var(data, 'extra'):
+        metadata['extra'] = get_value_from_var(data, 'extra')
+
+    if get_value_from_var(data, 'todo'):
+        metadata['todo'] = get_value_from_var(data, 'todo', [])
+
+    return metadata
+
+
+def process_templates(templates_dir, template_file, dest_path, data):
+    t = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(templates_dir),
+        extensions=['jinja2.ext.autoescape'],
+        autoescape=True)  #TODO optimize?
+    template = t.get_template(template_file)
+
+    contents = template.render(data)
+
+    fh = open(dest_path, 'w')
+    fh.write(contents)
+    fh.close()
+
+
+def deep_merge(a, b, path=None):  # original version: http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
+    if path is None: path = []
+    for key in b:
+        if key in a:
+            if isinstance(a[key], dict) and isinstance(b[key], dict):
+                deep_merge(a[key], b[key], path + [str(key)])
+            elif a[key] == b[key]:
+                pass # same leaf value
+            elif (a[key] is None and b[key] is not None) or (a[key] != b[key]):
+                a[key] = b[key]
+            elif b[key] is not None:
+                print("a")
+                print(a)
+                print("b")
+                print(b)
+                raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
+        else:
+            a[key] = b[key]
+    return a
+
+
+def main(argv):
+    project_dir = argv[1]
+    templates_dir = argv[2]
+    meta_defaults_file = argv[3] or None
+    meta_file_path = None
+
+    for file_type in ['yaml', 'json']:
+        if os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
+            meta_file_path = '{0}/meta.{1}'.format(project_dir, file_type)
+            break
+        elif os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
+            meta_file_path = '{0}/meta.{1}'.format(project_dir, file_type)
+            break
+
+    if not meta_file_path:
+        raise ValueError('Couldn\'t find metadata file meta.yaml or meta.json')
+
+    data = load_file(meta_file_path)
+
+    if meta_defaults_file:
+        data_defaults = load_file(meta_defaults_file)
+        data = deep_merge(data_defaults, data)
+
+    data = collect_metadata(data, project_dir)
+
+    for template_file in ['README.rst.jinja']:
+        file_name, file_type = os.path.splitext(template_file)
+        dest_path = '{0}/{1}'.format(project_dir, file_name)
+
+        #pprint(data)
+        process_templates(templates_dir, template_file, dest_path, data)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
