@@ -5,6 +5,9 @@ FIXME
 
 Useful links:
 * https://docs.npmjs.com/files/package.json
+* https://www.npmjs.com/package/meta-json
+* https://docs.npmjs.com/files/package.json
+* https://docs.puppetlabs.com/puppet/latest/reference/modules_publishing.html
 """
 
 import collections
