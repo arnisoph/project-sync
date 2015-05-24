@@ -7,32 +7,14 @@ Useful links:
 * https://docs.npmjs.com/files/package.json
 """
 
+import collections
 import jinja2
 import json
 import os
-from pprint import pprint
+import pprint
 import subprocess
 import sys
 import yaml
-
-
-def load_file(file_path):
-    file_name, file_type = os.path.splitext(file_path)
-    loader = None
-
-    if file_type == '.yaml':
-        loader = yaml
-    else:
-        loader = json
-
-    fh = open(file_path, 'r')
-    stream = fh.read()
-    fh.close()
-
-    if file_type == '.json':
-        return loader.loads(stream)
-    else:
-        return loader.load(stream)
 
 
 def get_value_from_var(var, keys=[], default=None):
@@ -43,57 +25,6 @@ def get_value_from_var(var, keys=[], default=None):
         if var.get(key, None):
             return var.get(key)
     return default
-
-
-def collect_metadata(data, project_dir):
-    metadata = {}
-
-    metadata['name'] = get_value_from_var(data, 'name')  #TODO
-    metadata['version'] = get_value_from_var(data, 'version', '0.0.1')  #TODO fetch git tag
-    metadata['maintainer'] = get_value_from_var(data, ['maintainer', 'author'], 'FIXME')  #TODO
-
-    if get_value_from_var(data, 'authors'):  # Notice: This is not the same as maintainer
-        metadata['authors'] = get_value_from_var(data, 'authors', [])
-    else:
-        args = ['git', 'log', '--format=\'%aN <%aE>\'']
-        cmd = ' '.join(args)
-        p = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=project_dir)
-        b_stdout, b_stderr = p.communicate()
-        stdout = b_stdout.decode('utf-8')
-
-        if stdout:
-            authors = sorted(set(stdout.rstrip('\n').split('\n')))
-            metadata['authors'] = authors
-
-    if get_value_from_var(data, 'summary'):
-        metadata['summary'] = get_value_from_var(data, 'summary')
-
-    if get_value_from_var(data, 'license'):
-        # use identifier from https://spdx.org/licenses/
-        metadata['license'] = get_value_from_var(data, 'license')
-
-    if get_value_from_var(data, ['repository', 'source']):
-        metadata['source'] = get_value_from_var(data, ['repository', 'source'])
-
-    if get_value_from_var(data, 'dependencies'):
-        metadata['dependencies'] = get_value_from_var(data, 'dependencies')
-
-    if get_value_from_var(data, 'project_page'):
-        metadata['project_page'] = get_value_from_var(data, 'project_page')
-
-    if get_value_from_var(data, 'issues_url'):
-        metadata['issues_url'] = get_value_from_var(data, 'issues_url')
-
-    if get_value_from_var(data, ['compatibility', 'operatingsystem_support']):
-        metadata['compatibility'] = get_value_from_var(data, ['compatibility', 'operatingsystem_support'])
-
-    if get_value_from_var(data, 'extra'):
-        metadata['extra'] = get_value_from_var(data, 'extra')
-
-    if get_value_from_var(data, 'todo'):
-        metadata['todo'] = get_value_from_var(data, 'todo', [])
-
-    return metadata
 
 
 def process_templates(templates_dir, template_file, dest_path, data):
@@ -110,58 +41,133 @@ def process_templates(templates_dir, template_file, dest_path, data):
     fh.close()
 
 
-def deep_merge(a, b, path=None):  # original version: http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
-    if path is None: path = []
+def deep_merge(a, b, path=[]):  # original version: http://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge
     for key in b:
         if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
                 deep_merge(a[key], b[key], path + [str(key)])
             elif a[key] == b[key]:
-                pass # same leaf value
+                pass  # same leaf value
             elif (a[key] is None and b[key] is not None) or (a[key] != b[key]):
                 a[key] = b[key]
             elif b[key] is not None:
-                print("a")
-                print(a)
-                print("b")
-                print(b)
                 raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
         else:
             a[key] = b[key]
     return a
 
 
+class ProjectMetaData(collections.OrderedDict):
+    def __init__(self):
+        super(ProjectMetaData, self).__init__()
+
+        self.standard_metadata_items = [
+            'authors',  # Notice: This is not the same as maintainer
+            'compatibility',
+            'dependencies',
+            'extra',  #TODO rename to misc?
+            'license',  # use identifier from https://spdx.org/licenses/
+            'maintainer',
+            'name',
+            'project_url',
+            'source',
+            'summary',
+            'todo',
+            'version',
+        ]
+
+    def load_file(self, file_path):
+        file_name, file_type = os.path.splitext(file_path)
+
+        if file_type == '.yaml':
+            loader = yaml
+        else:
+            loader = json
+
+        fh = open(file_path, 'r')
+        stream = fh.read()
+        fh.close()
+
+        if file_type == '.json':
+            data = loader.loads(stream)
+        else:
+            data = loader.load(stream)
+
+        self.update_metadata(data)
+
+    def update_metadata(self, raw_data):
+        data = {}
+        for item in self.standard_metadata_items:
+            item_value = get_value_from_var(raw_data, item)
+            if item_value is not None:
+                data[item] = item_value
+
+        deep_merge(self, data)
+
+    def finalize_metadata(self):
+        for item in self.standard_metadata_items:
+            if item in self.keys():
+                pass
+            else:
+                self[item] = None
+
+
+class Project(object):
+    def __init__(self, metadata=ProjectMetaData(), project_dir=None):
+        self.metadata = metadata
+        self.metadata['project_dir'] = project_dir
+
+    def get_metadata_file(self):
+        project_dir = self.metadata.get('project_dir')
+
+        for file_type in ['yaml', 'json']:
+            if os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
+                return '{0}/meta.{1}'.format(project_dir, file_type)
+            elif os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
+                return '{0}/meta.{1}'.format(project_dir, file_type)
+
+    def get_vcs_authors(self):
+        args = ['git', 'log', '--format=\'%aN <%aE>\'']
+        cmd = ' '.join(args)
+        p = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.metadata['project_dir'])
+        b_stdout, b_stderr = p.communicate()
+        stdout = b_stdout.decode('utf-8')
+        if stdout:
+            return sorted(set(stdout.rstrip('\n').split('\n')))
+        else:
+            return []
+
+    def update_metadata(self, metadata_file_path=None):
+        if metadata_file_path is None:
+            self.metadata.load_file(self.get_metadata_file())
+        else:
+            self.metadata.load_file(metadata_file_path)
+
+    def dump_metadata(self):
+        self.metadata.finalize_metadata()
+        if not self.metadata['authors']:
+            self.metadata['authors'] = self.get_vcs_authors()
+        return self.metadata
+
+
 def main(argv):
     project_dir = argv[1]
     templates_dir = argv[2]
-    meta_defaults_file = argv[3] or None
-    meta_file_path = None
+    metadata_defaults_file_path = argv[3] or None
 
-    for file_type in ['yaml', 'json']:
-        if os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
-            meta_file_path = '{0}/meta.{1}'.format(project_dir, file_type)
-            break
-        elif os.path.isfile('{0}/meta.{1}'.format(project_dir, file_type)):
-            meta_file_path = '{0}/meta.{1}'.format(project_dir, file_type)
-            break
+    project = Project(project_dir=project_dir)
+    project.update_metadata(metadata_defaults_file_path)
+    project.update_metadata()
 
-    if not meta_file_path:
-        raise ValueError('Couldn\'t find metadata file meta.yaml or meta.json')
-
-    data = load_file(meta_file_path)
-
-    if meta_defaults_file:
-        data_defaults = load_file(meta_defaults_file)
-        data = deep_merge(data_defaults, data)
-
-    data = collect_metadata(data, project_dir)
+    metadata = project.dump_metadata()
+    #pprint(metadata)
 
     for template_file in ['README.rst.jinja']:
         file_name, file_type = os.path.splitext(template_file)
         dest_path = '{0}/{1}'.format(project_dir, file_name)
 
         #pprint(data)
-        process_templates(templates_dir, template_file, dest_path, data)
+        process_templates(templates_dir, template_file, dest_path, metadata)
 
 
 if __name__ == '__main__':
