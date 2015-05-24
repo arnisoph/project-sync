@@ -100,20 +100,18 @@ Miscellaneous
 
 {% if 'recommended_formulas' in extra -%}
 Recommended formulas:
-
-{% for entry in extra.recommended_formulas|default({}) -%}
+{% for entry in extra.recommended_formulas|default({}) %}
 * {{ entry.descr }}: `{{ entry.name }} <{{ entry.url }}>`_
-{% endfor -%}
+{%- endfor -%}
 {%- endif -%}
 
 
 {%- if 'further_reading' in extra -%}
-{{- '\n' -}}
+{{- '\n\n' -}}
 Further reading:
-
-{% for entry in extra.further_reading|default({}) -%}
+{% for entry in extra.further_reading|default({}) %}
 * {{ entry }}
-{% endfor -%}
+{%- endfor -%}
 {%- endif -%}
 
 
@@ -121,4 +119,4 @@ Further reading:
 {{- '\n\n' -}}
 .. image:: {{ extra.asciinema.link }}.png
     :target: {{ extra.asciinema.link }}
-{% endif -%}
+{%- endif -%}

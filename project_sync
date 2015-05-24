@@ -37,7 +37,7 @@ def process_templates(templates_dir, template_file, dest_path, data):
     contents = template.render(data)
 
     fh = open(dest_path, 'w')
-    fh.write(contents)
+    fh.write('{0}\n'.format(contents))
     fh.close()
 
 
@@ -162,7 +162,7 @@ def main(argv):
     metadata = project.dump_metadata()
     #pprint(metadata)
 
-    for template_file in ['README.rst.jinja']:
+    for template_file in ['README.rst.jinja', 'LICENSE.jinja']:  #TODO get rid of template
         file_name, file_type = os.path.splitext(template_file)
         dest_path = '{0}/{1}'.format(project_dir, file_name)
 
