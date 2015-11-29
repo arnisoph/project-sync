@@ -8,6 +8,7 @@ Useful links:
 * https://www.npmjs.com/package/meta-json
 * https://docs.npmjs.com/files/package.json
 * https://docs.puppetlabs.com/puppet/latest/reference/modules_publishing.html
+* https://robinpowered.com/blog/best-practice-system-for-organizing-and-tagging-github-issues/
 """
 
 import collections

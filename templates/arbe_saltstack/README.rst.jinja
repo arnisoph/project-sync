@@ -4,23 +4,23 @@
 
 {{- '\n\n\n' -}}
 
-.. image:: https://img.shields.io/badge/flattr-donate-red.svg
+.. image:: https://img.shields.io/badge/donate-flattr-red.svg
     :alt: Donate via flattr
     :target: {{ extra.flattr }}
-
-.. image:: https://img.shields.io/gratipay/{{ extra.gratipay }}.svg
-    :alt: Donate via Gratipay
-    :target: https://www.gratipay.com/{{ extra.gratipay }}/
 
 .. image:: https://img.shields.io/badge/license-{{ license|replace('-', '--') }}-blue.svg
     :alt: {{ license }}-licensed
     :target: {{ source }}/blob/master/LICENSE
 
-.. image:: https://img.shields.io/badge/gitter-chat-brightgreen.svg
-    :alt: Join Chat
+.. image:: https://img.shields.io/badge/chat-gitter-brightgreen.svg
+    :alt: Join Gitter Chat
     :target: https://gitter.im/{{ source|replace('https://github.com/', '') }}?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
-{{ summary }}
+.. image:: https://img.shields.io/badge/chat-%23salt%20@%20Freenode-brightgreen.svg
+    :alt: Join Internet Relay Chat
+    :target: http://webchat.freenode.net/?channels=%23salt&uio=d4
+
+{{ summary|safe }}
 
 .. contents::
     :backlinks: none
