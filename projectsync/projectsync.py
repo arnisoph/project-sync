@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 FIXME
@@ -15,7 +15,6 @@ import collections
 import jinja2
 import json
 import os
-import pprint
 import subprocess
 import sys
 import yaml
@@ -35,7 +34,7 @@ def process_templates(templates_dir, template_file, dest_path, data):
     t = jinja2.Environment(
         loader=jinja2.FileSystemLoader(templates_dir),
         extensions=['jinja2.ext.autoescape'],
-        autoescape=True)  #TODO optimize?
+        autoescape=True)  # TODO optimize?
     template = t.get_template(template_file)
 
     contents = template.render(data)
@@ -69,7 +68,7 @@ class ProjectMetaData(collections.OrderedDict):
             'authors',  # Notice: This is not the same as maintainer
             'compatibility',
             'dependencies',
-            'extra',  #TODO rename to misc?
+            'extra',  # TODO rename to misc?
             'license',  # use identifier from https://spdx.org/licenses/
             'maintainer',
             'name',
@@ -166,7 +165,7 @@ def main(argv):
     metadata = project.dump_metadata()
     #pprint(metadata)
 
-    for template_file in ['README.rst.jinja', 'LICENSE.jinja']:  #TODO get rid of template
+    for template_file in ['README.rst.jinja', 'LICENSE.jinja']:  # TODO get rid of template
         file_name, file_type = os.path.splitext(template_file)
         dest_path = '{0}/{1}'.format(project_dir, file_name)
 

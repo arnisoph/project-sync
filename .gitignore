@@ -66,3 +66,4 @@ test/.vagrant/
 test/nodes.yaml
 
 MANIFEST
+projectsync.egg-info/
