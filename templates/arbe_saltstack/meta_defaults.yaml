@@ -4,6 +4,7 @@ maintainer: Arnold Bechtoldt <mail@arnoldbechtoldt.com>
 extra:
   flattr: https://flattr.com/profile/bechtoldt
   gratipay: bechtoldt
+  travis: True
   recommended_formulas:
     - name: saltstack-salt-formula
       descr: SaltStack management

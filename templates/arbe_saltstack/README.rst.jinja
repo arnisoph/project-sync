@@ -12,6 +12,13 @@
     :alt: {{ license }}-licensed
     :target: {{ source }}/blob/master/LICENSE
 
+{% if extra.travis|default(False) -%}
+.. image:: https://travis-ci.org/bechtoldt/{{ name }}.svg
+    :alt: Build Status
+    :target: https://travis-ci.org/bechtoldt/{{ name }}
+
+{% endif -%}
+
 .. image:: https://img.shields.io/badge/chat-gitter-brightgreen.svg
     :alt: Join Gitter Chat
     :target: https://gitter.im/{{ source|replace('https://github.com/', '') }}?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge

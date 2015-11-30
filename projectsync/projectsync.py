@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 FIXME
@@ -154,6 +154,7 @@ class Project(object):
 
 
 def main(argv):
+    # ~/Documents/dev/github/project-sync/projectsync/projectsync.py . ~/Documents/dev/github/project-sync/templates/arbe_saltstack  ~/Documents/dev/github/project-sync/templates/arbe_saltstack/meta_defaults.yaml
     project_dir = argv[1]
     templates_dir = argv[2]
     metadata_defaults_file_path = argv[3] or None
